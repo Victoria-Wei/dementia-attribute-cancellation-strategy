@@ -17,7 +17,9 @@
     - FSM
 2. Proposed
     - DACS
-
+3. Exp.
+    - eval_toggle_more.py
+    
 # Evaluation
 1. ASR performance in WER  
 use `-v` to set how many groups you want, `-csv` to set the path to xetracted feats. from last section, and `-save` to set path to the folder where to want to keep WER files, e.g.  
