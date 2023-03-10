@@ -184,12 +184,12 @@ from jiwer import wer
 
 def ID2Label(ID,
             spk2label = np.load("/mnt/Internal/FedASR/weitung/HuggingFace/Pretrain/dataset/test_dic.npy", allow_pickle=True).tolist()):
-    name = ID.split("_")                                  #  from file name to spkID
-    if (name[1] == 'INV'):                                # interviewer is CC
+    name = ID.split("_")                                                    #  from file name to spkID
+    if (name[1] == 'INV'):                                                  # interviewer is CC
         label = 0
-    else:                                                 # for participant
-        label = spk2label[name[0]]                        # label according to look-up table
-    return label                                          # return dementia label for this file
+    else:                                                                   # for participant
+        label = spk2label[name[0]]                                          # label according to look-up table
+    return label                                                            # return dementia label for this file
 
 def csv2dataset(PATH = '/mnt/Internal/FedASR/Data/ADReSS-IS2020-data/clips/',
                 path = '/mnt/Internal/FedASR/Data/ADReSS-IS2020-data/mid_csv/test.csv'):
@@ -198,31 +198,31 @@ def csv2dataset(PATH = '/mnt/Internal/FedASR/Data/ADReSS-IS2020-data/clips/',
         print("Load data from local...")
         return load_from_disk(stored)
  
-    data = pd.read_csv(path)                                               # read desired csv
-    dataset = Dataset.from_pandas(data)                                    # turn into class dataset
+    data = pd.read_csv(path)                                                # read desired csv
+    dataset = Dataset.from_pandas(data)                                     # turn into class dataset
     
     # initialize a dictionary
     my_dict = {}
-    my_dict["path"] = []                                                   # path to audio
-    my_dict["array"] = []                                                  # waveform in array
-    my_dict["text"] = []                                                   # ground truth transcript
+    my_dict["path"] = []                                                    # path to audio
+    my_dict["array"] = []                                                   # waveform in array
+    my_dict["text"] = []                                                    # ground truth transcript
     my_dict["dementia_labels"] = []
 
     i = 1
-    for path in dataset['path']:                                           # for all files
-        if dataset['sentence'][i-1] != None:                               # only the non-empty transcript
-            sig, s = librosa.load(PATH + path, sr=16000, dtype='float32')  # read audio w/ 16k sr
-            if len(sig) > 1600:                                            # get rid of audio that's too short
-                my_dict["path"].append(path)                                   # add path
-                my_dict["array"].append(sig)                                   # add audio wave
-                my_dict["text"].append(dataset['sentence'][i-1].upper())       # transcript to uppercase
+    for path in dataset['path']:                                            # for all files
+        if dataset['sentence'][i-1] != None:                                # only the non-empty transcript
+            sig, s = librosa.load(PATH + path, sr=16000, dtype='float32')   # read audio w/ 16k sr
+            if len(sig) > 1600:                                             # get rid of audio that's too short
+                my_dict["path"].append(path)                                # add path
+                my_dict["array"].append(sig)                                # add audio wave
+                my_dict["text"].append(dataset['sentence'][i-1].upper())    # transcript to uppercase
                 my_dict["dementia_labels"].append(ID2Label(path))
-        print(i, end="\r")                                                 # print progress
+        print(i, end="\r")                                                  # print progress
         i += 1
     print("There're ", len(my_dict["path"]), " non-empty files.")
 
     result_dataset = Dataset.from_dict(my_dict)
-    result_dataset.save_to_disk(stored)
+    result_dataset.save_to_disk(stored)                                     # save for later use
     
     return result_dataset
 
@@ -433,16 +433,16 @@ class RecallLoss(nn.Module):
         input = input.to(torch.float)
         target = target.to(torch.int64)
 
-        N, C = input.size()[:2] # [batch_size, 2]
+        N, C = input.size()[:2]                                                         # [batch_size, 2]
         logpt = F.log_softmax(input, dim=1)
-        pt = logpt.exp() # pred_prob: [batch_size, 2]
+        pt = logpt.exp()                                                                # pred_prob: [batch_size, 2]
         #print("pt: ", pt)
 
         ## convert target (N, 1, *) into one hot vector (N, C, *)
-        target = target.view(N, 1, -1)  # (N, 1, *)
+        target = target.view(N, 1, -1)                                                  # (N, 1, *)
         last_size = target.size(-1)
-        target_onehot = torch.zeros((N, C, last_size)).type_as(pt) # (N, 1, *) ==> (N, C, *)
-        target_onehot.scatter_(1, target, 1) # (N, C, *)
+        target_onehot = torch.zeros((N, C, last_size)).type_as(pt)                      # (N, 1, *) ==> (N, C, *)
+        target_onehot.scatter_(1, target, 1)                                            # (N, C, *)
 
         true_positive = torch.sum(pt.view(N, C, last_size) * target_onehot, dim=2)      # (N, C): true label的預測"機率"
         total_target = torch.sum(target_onehot, dim=2)                                  # (N, C): true_prob
@@ -460,8 +460,8 @@ class RecallLoss(nn.Module):
             if self.weight.type() != input.type():
                 self.weight = self.weight.type_as(input)
             #print("weight: ", self.weight)
-            recall_ori = recall * self.weight * C            # (N, C): 1 - recall
-            precision_ori = precision * self.weight * C   # (N, C): 1 - prec
+            recall_ori = recall * self.weight * C                                       # (N, C): recall
+            precision_ori = precision * self.weight * C                                 # (N, C): prec
             f1 = f1 * self.weight * C                                                           # (N, C): f1
             recall = (torch.ones((N, C)).type_as(recall) - recall) * self.weight * C            # (N, C): 1 - recall
             precision = (torch.ones((N, C)).type_as(precision) - precision) * self.weight * C   # (N, C): 1 - prec
@@ -504,7 +504,7 @@ class Data2VecAudioForCTC(Data2VecAudioPreTrainedModel):
         print("lambda = ", self.alpha)
         print("lm_thres = ", self.lm_thres)
 
-        # 加lm_model
+        # 加toggle network, lm_model
         #self.lm_fsm = nn.Linear(config.hidden_size, config.hidden_size)          # 找出對lm重要的feat
         self.arbitrator = nn.Linear(config.hidden_size, config.hidden_size*4)    # 2條保護AD資訊（one-hot後用其中一條），2條保護ASR資訊（one-hot後用其中一條）
         self.lm_head = nn.Linear(config.hidden_size, config.vocab_size)          # output字母的"機率"
@@ -512,7 +512,7 @@ class Data2VecAudioForCTC(Data2VecAudioPreTrainedModel):
         # 加dementia model
         self.dementia_head = nn.Linear(config.hidden_size, 2)                    # 辨識AD
         
-        # define similarity loss: AM-Softmax
+        # define similarity loss: AM-Softmax, aka div loss
         self.criterion_similar = AngularPenaltySMLoss(in_features=config.hidden_size, out_features=2, loss_type='cosface').to('cpu')
         
         # freeze feature_extractor    
@@ -525,7 +525,7 @@ class Data2VecAudioForCTC(Data2VecAudioPreTrainedModel):
             #self.freeze_lm_fsm()
             self.freeze_arbitrator()
             self.freeze_criterion_similar()
-        elif STAGE == 2:                                                # freeze all, train FSM alone
+        elif STAGE == 2:                                                # freeze all, train toggle network alone
             print("Current stage: 2")
             self.freeze_data2vec_audio()
             self.freeze_lm_head()
@@ -618,7 +618,7 @@ class Data2VecAudioForCTC(Data2VecAudioPreTrainedModel):
         hidden_states = self.dropout(hidden_states)
 
         # 沒過FSM，用來單獨train AD classifier
-        dementia_logits_unmask = self.dementia_head(hidden_states) # for stage 1 training
+        dementia_logits_unmask = self.dementia_head(hidden_states) #         for stage 1 training
 
         # hidden_states: data2vec_audio embedding
         ###################
@@ -653,6 +653,7 @@ class Data2VecAudioForCTC(Data2VecAudioPreTrainedModel):
             y1 = AD_score[:, :, :, 1]                                                   # another vector
             AD_score[:, :, :, 0] = (y1 - y0) * TOGGLE_RATIO + y0                        # replace target vector      
 
+        # go through GS to form mask
         #lm_mask = torch.nn.functional.gumbel_softmax(lm_score, hard=True, dim=-1)[:, :, :, 0] # back to [batch_size, time-step, hidden_state]
         lm_mask = gumbel_softmax(lm_score, tau=GS_TAU, hard=True, dim=-1)[:, :, :, 0]
         #AD_mask = torch.nn.functional.gumbel_softmax(AD_score, hard=True, dim=-1)[:, :, :, 0] # back to [batch_size, time-step, hidden_state]
@@ -710,7 +711,7 @@ class Data2VecAudioForCTC(Data2VecAudioPreTrainedModel):
             # ctc_loss doesn't support fp16
             log_probs = nn.functional.log_softmax(logits, dim=-1, dtype=torch.float32).transpose(0, 1)
             log_probs_r = nn.functional.log_softmax(logits_r, dim=-1, dtype=torch.float32).transpose(0, 1) # logit轉prob
-            log_probs_r = ReverseLayerF.apply(log_probs_r, self.alpha) # GRL
+            log_probs_r = ReverseLayerF.apply(log_probs_r, self.alpha) # ASR-GRL
             
             with torch.backends.cudnn.flags(enabled=False):
                 loss = nn.functional.ctc_loss(
@@ -733,7 +734,7 @@ class Data2VecAudioForCTC(Data2VecAudioPreTrainedModel):
                     reduction=self.config.ctc_loss_reduction,
                     zero_infinity=self.config.ctc_zero_infinity,
                 )
-                # gradient reversal layers(GRL)
+                
                 if AD_loss == "cel":
                     print("loss: cel")
                     loss_fn = nn.CrossEntropyLoss()
@@ -743,7 +744,7 @@ class Data2VecAudioForCTC(Data2VecAudioPreTrainedModel):
                     dementia_loss_rev = loss_fn(dementia_output_mean_r, dementia_labels)                # reverse
                 elif AD_loss == "recall":                 
                     #print("loss: recall")
-                    loss_fn = RecallLoss(weight=W_LOSS)                                             # true label = 1 (AD) 的預測"機率"越大越好
+                    loss_fn = RecallLoss(weight=W_LOSS)                                                 # W_LOSS=[w_HC, w_AD]
                     #loss = criterion(y_predict, y_target)
                     # predict: [N, C, *]    ; target: [N, *]
                     dementia_loss = loss_fn(dementia_output_mean, dementia_labels, AD_loss)                      # AD classifier: [batch_size, 2], [batch_size,]
@@ -756,7 +757,7 @@ class Data2VecAudioForCTC(Data2VecAudioPreTrainedModel):
 
                 elif AD_loss == "prec":                 
                     #print("loss: precision")
-                    loss_fn = RecallLoss(weight=[0.1, 0.9])
+                    loss_fn = RecallLoss(weight=[0.1, 0.9])                                                      # emphasize on AD PAR
                     
                     dementia_loss = loss_fn(dementia_output_mean, dementia_labels, AD_loss)                      # AD classifier
                     dementia_loss_unmask = loss_fn(dementia_output_mean_unmask, dementia_labels, AD_loss)        # unmask
@@ -783,7 +784,7 @@ class Data2VecAudioForCTC(Data2VecAudioPreTrainedModel):
                     dementia_loss_unmask = loss_fn(dementia_output_mean_unmask, dementia_labels, AD_loss)        # unmask
                     dementia_loss_rev = loss_fn(dementia_output_mean_r, dementia_labels, AD_loss)                # reverse     
                 # att loss
-                Att_loss = FSMatt_loss(lm_mask, AD_mask)
+                Att_loss = FSMatt_loss(lm_mask, AD_mask)                                                        # not used in this version
                 # diversity loss: AM-Softmax
                 #scores = torch.cat((hidden_states * lm_mask, hidden_states * AD_mask), dim=0)
                 #am_labels = torch.cat((torch.zeros(len(hidden_states), dtype=torch.long), torch.ones(len(hidden_states), dtype=torch.long)), dim=0).to('cpu')
@@ -815,7 +816,7 @@ class Data2VecAudioForCTC(Data2VecAudioPreTrainedModel):
                     #print("Current stage: 1")
                     final_loss = dementia_loss_unmask
                     #print("final loss: ", final_loss)
-                elif STAGE == 2:                                                # train FSM
+                elif STAGE == 2:                                                # train toggle network
                     #print("Current stage: 2")
                     final_loss = loss + dementia_loss_rev + loss_r + dementia_loss + score_loss #+ Att_loss #+ score_loss
                     #print(loss, dementia_loss_rev, loss_r, dementia_loss, l2_lambda * l2_norm)
@@ -873,7 +874,7 @@ class CustomTrainer(Trainer):
         
         # write to txt file
         file_object = open(LOG_DIR + log_file, 'a')
-        # Append 'hello' at the end of file
+        # Append at the end of file
         file_object.write(json.dumps(output) + '\n')
         # Close the file
         file_object.close()
@@ -902,18 +903,18 @@ parser.add_argument('-gs_tau', '--GS_TAU', type=float, default=1, help="Tau for 
 parser.add_argument('-w_loss', '--W_LOSS', type=float, default=None, nargs='+', help="weight for HC and AD")
 
 args = parser.parse_args()
-LAMBDA = args.LAMBDA
-REVERSE = args.GRL
-STAGE = args.STAGE
-model_in_dir = args.model_in_path
-model_out_dir = args.model_out_path
-log_file = args.log_path
-AD_loss = args.AD_loss
-ckpt = args.checkpoint
-TOGGLE_RATIO = args.TOGGLE_RATIO
-GS_TAU = args.GS_TAU
-if args.W_LOSS == None:
-    W_LOSS = [0.1, 0.9] # default weight for HC and AD
+LAMBDA = args.LAMBDA                    # lambda for GRL
+REVERSE = args.GRL                      # not used in this version
+STAGE = args.STAGE                      # stage 1: train AD classifier; stage 2: train toggling network
+model_in_dir = args.model_in_path       # path to load the initial model
+model_out_dir = args.model_out_path     # path to store the resulted model
+log_file = args.log_path                # path to save log file
+AD_loss = args.AD_loss                  # type of AD loss: cel, f1, recall, prec, (recall_ori, prec_ori)
+ckpt = args.checkpoint                  # path to checkpoint s.t. training from checkpoint is possible
+TOGGLE_RATIO = args.TOGGLE_RATIO        # for exp. to change toggle rate
+GS_TAU = args.GS_TAU                    # temperature for gumbel_softmax
+if args.W_LOSS == None:                 # weight for HC and AD
+    W_LOSS = [0.1, 0.9]                 # default weight for HC and AD
 else:
     W_LOSS = args.W_LOSS
 print("weight for loss: ", W_LOSS)
@@ -921,32 +922,34 @@ print("weight for loss: ", W_LOSS)
 # 設定log file位置與名稱
 LOG_DIR = './saves/log/'
 
-# threshold for maskes
+# threshold for maskes, not used here
 AD_THRES = 0.5
 LM_THRES = 0.5
 
-# load model from huggingface hub
+# load model from huggingface hub, here data2vec model
 name = "facebook/data2vec-audio-large-960h"# + model_in_dir.split("/")[-3]
 print("Current model: ", name)
 from transformers import Data2VecAudioConfig
-mask_time_prob = 0                                                                     # change config
+mask_time_prob = 0                                         # change config to avoid training stopping
 config = Data2VecAudioConfig.from_pretrained(name, mask_time_prob=mask_time_prob)
 model = Data2VecAudioForCTC.from_pretrained(model_in_dir, config=config)
-model.config.ctc_zero_infinity = True
+model.config.ctc_zero_infinity = True                      # to avoid inf values
 
 processor = Wav2Vec2Processor.from_pretrained(name)
 
 data_collator = DataCollatorCTCWithPadding(processor=processor, padding=True)
 
+# load train / test data
 train_data = csv2dataset(path = "/mnt/Internal/FedASR/Data/ADReSS-IS2020-data/mid_csv/train.csv")
 #dev_data = csv2dataset(path = "/mnt/Internal/FedASR/Data/ADReSS-IS2020-data/mid_csv/dev.csv")
 test_data = csv2dataset(path = "/mnt/Internal/FedASR/Data/ADReSS-IS2020-data/mid_csv/test.csv")
 
+# map to desired form
 train_data = train_data.map(prepare_dataset, num_proc=10)
 #dev_data = dev_data.map(prepare_dataset, num_proc=10)
 test_data = test_data.map(prepare_dataset, num_proc=10)
 
-if STAGE == 1:
+if STAGE == 1:                                          # config to train AD classifier
     training_args = TrainingArguments(
         output_dir=model_out_dir,
         group_by_length=True,
@@ -969,20 +972,20 @@ if STAGE == 1:
         #fp16_full_eval=True,      # to save memory
         #max_grad_norm=0.5
     )
-elif STAGE == 2:
+elif STAGE == 2:                                        # config to train toggle network
     training_args = TrainingArguments(
         output_dir=model_out_dir,
         group_by_length=True,
         per_device_train_batch_size=1,
         per_device_eval_batch_size=1,
         evaluation_strategy="steps",
-        num_train_epochs=30,                 # FSM alone
+        num_train_epochs=30,
         fp16=True,
         gradient_checkpointing=True, 
         save_steps=500,
         eval_steps=500,
         logging_steps=500,
-        learning_rate=1e-3, # 原本用1e-5
+        learning_rate=1e-3,
         weight_decay=0.005,
         warmup_steps=1000,
         save_total_limit=2,
@@ -992,7 +995,7 @@ elif STAGE == 2:
         #fp16_full_eval=True,      # to save memory
         #max_grad_norm=0.5
     )
-elif STAGE == 3:
+elif STAGE == 3:                                    # not used in this version
     training_args = TrainingArguments(
         output_dir=model_out_dir,
         group_by_length=True,
@@ -1026,7 +1029,8 @@ trainer = CustomTrainer(
     tokenizer=processor.feature_extractor,
 )
 if ckpt != None:
-    trainer.train(ckpt)
+    trainer.train(ckpt)     # train from given checkpoint
 else:
     trainer.train()
+# save resulted model as "final"
 trainer.save_model(model_out_dir + "/final")
