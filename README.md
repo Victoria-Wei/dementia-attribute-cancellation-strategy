@@ -7,7 +7,19 @@
     - Single Toggling
     - FSM
 2. Proposed
-    - DACS
+    - DACS: train for 2 stage. 
+        <details><summary>Show important arguments</summary>
+
+        - `--AD_loss`: type of loss for AD classifier, can be chosen from the following types: cel, f1, recall, prec, (recall_ori, prec_ori)
+        - `--checkpoint`: path to checkpoint so that training from checkpoint is possible
+        - `--TOGGLE_RATIO`: for exp. to change toggle rate, y0' = (y1-y0)*TOGGLE_RATIO + y0
+        - `--GS_TAU`: temperature for gumbel_softmax
+        - `--W_LOSS`: weight for HC and AD
+        </details>
+
+        - Stage 1: train AD classifier from fine-tune model, e.g.`python trainer_data2vec_2st.py -lam 0.5 -st 1 --AD_loss "recall" --W_LOSS 0.8 0.2 -model_in "./saves/data2vec-audio-large-960h_finetuned/final/" -model_out "./saves/data2vec-audio-large-960h_new1_recall_82" -log "data2vec-audio-large-960h_new1_recall_82.txt"`
+        - Stage 2: train toggling network from stage 1 model, e.g. `python trainer_data2vec_2st.py -lam 0.5 -st 2 --AD_loss "recall" --W_LOSS 0.8 0.2 -model_in "./saves/data2vec-audio-large-960h_new1_recall_82/final/" -model_out "./saves/data2vec-audio-large-960h_new2_recall_82" -log "data2vec-audio-large-960h_new2_recall_82.txt"`
+
 
 # Extracting Feat.
 1. Baselines
