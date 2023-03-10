@@ -30,7 +30,19 @@
 2. Proposed
     - DACS
 3. Exp.
-    - eval_toggle_more.py
+    - `eval_toggle_more.py` is used for all 3 exp. that force to toggle on more or less.
+
+        We pass score y0 and y1 into gumbel_softmax mechanism to determine whether to toggle on certain node, and the larger the value of y0-y1 is, the more possible the decision will be to toggle on. In the later exp., we use y0-y1 to decide whether to toggle on or not.
+        <details><summary>Show important arguments</summary>
+
+        - `--exp_type`: type of exp., can be chosen from the following types: `h` for homogeneous masking, `a` for aggressive masking, and `p` for passive masking
+        - `--NUM_OFF`: num of groups to toggle off for homogeneous masking
+        - `--AP_RATIO`: ratio for aggressive & passive masking
+        </details>
+
+        - Homogeneous masking: toggle off `NUM_OFF` groups of nodes with smallest y0-y1, `NUM_OFF` from 0 to 15, e.g. `python eval_toggle_more.py -st 2 -model_type "data2vec" --AD_loss "recall" --exp_type "h" --NUM_OFF 3 -model "./saves/data2vec-audio-large-960h_new2_recall/final/" -csv "data2vec-audio-large-960h_new2_recall_3off"`
+        - Aggressive masking: toggle off more. Those originally toggled off are still off,  `AP_RATIO` of the nodes that were toggled on will be toggled off according to their y0-y1 values. The smaller the more likely to be toggled off. e.g. `python eval_toggle_more.py -st 2 -model_type "data2vec" --AD_loss "recall" --exp_type "a" --AP_RATIO 0.8 -model "./saves/data2vec-audio-large-960h_new2_recall/final/" -csv "data2vec-audio-large-960h_new2_recall_a80"`
+        - Passive masking: toggle on more. Those originally toggled on are still on. `AP_RATIO` of the nodes that were toggled off will be toggled on according to their y0-y1 values. The larger the more likely to be toggled on. e.g `python eval_toggle_more.py -st 2 -model_type "data2vec" --AD_loss "recall" --exp_type "p" --AP_RATIO 0.2 -model "./saves/data2vec-audio-large-960h_new2_recall/final/" -csv "data2vec-audio-large-960h_new2_recall_p20"`
     
 # Evaluation
 1. ASR performance in WER  
