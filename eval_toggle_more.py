@@ -1,3 +1,4 @@
+# only data2vec model is used!!!!!!!!!!
 from transformers.models.wav2vec2.configuration_wav2vec2 import Wav2Vec2Config
 from dataclasses import dataclass
 from typing import Optional, Tuple, Union
@@ -296,12 +297,12 @@ from jiwer import wer
 
 def ID2Label(ID,
             spk2label = np.load("/mnt/Internal/FedASR/weitung/HuggingFace/Pretrain/dataset/test_dic.npy", allow_pickle=True).tolist()):
-    name = ID.split("_")                                  #  from file name to spkID
-    if (name[1] == 'INV'):                                # interviewer is CC
+    name = ID.split("_")                                                    #  from file name to spkID
+    if (name[1] == 'INV'):                                                  # interviewer is CC
         label = 0
-    else:                                                 # for participant
-        label = spk2label[name[0]]                        # label according to look-up table
-    return label                                          # return dementia label for this file
+    else:                                                                   # for participant
+        label = spk2label[name[0]]                                          # label according to look-up table
+    return label                                                            # return dementia label for this file
 
 def csv2dataset(PATH = '/mnt/Internal/FedASR/Data/ADReSS-IS2020-data/clips/',
                 path = '/mnt/Internal/FedASR/Data/ADReSS-IS2020-data/mid_csv/test.csv'):
@@ -310,31 +311,31 @@ def csv2dataset(PATH = '/mnt/Internal/FedASR/Data/ADReSS-IS2020-data/clips/',
         print("Load data from local...")
         return load_from_disk(stored)
  
-    data = pd.read_csv(path)                                               # read desired csv
-    dataset = Dataset.from_pandas(data)                                    # turn into class dataset
+    data = pd.read_csv(path)                                                # read desired csv
+    dataset = Dataset.from_pandas(data)                                     # turn into class dataset
     
     # initialize a dictionary
     my_dict = {}
-    my_dict["path"] = []                                                   # path to audio
-    my_dict["array"] = []                                                  # waveform in array
-    my_dict["text"] = []                                                   # ground truth transcript
+    my_dict["path"] = []                                                    # path to audio
+    my_dict["array"] = []                                                   # waveform in array
+    my_dict["text"] = []                                                    # ground truth transcript
     my_dict["dementia_labels"] = []
 
     i = 1
-    for path in dataset['path']:                                           # for all files
-        if dataset['sentence'][i-1] != None:                               # only the non-empty transcript
-            sig, s = librosa.load(PATH + path, sr=16000, dtype='float32')  # read audio w/ 16k sr
-            if len(sig) > 1600:                                            # get rid of audio that's too short
-                my_dict["path"].append(path)                                   # add path
-                my_dict["array"].append(sig)                                   # add audio wave
-                my_dict["text"].append(dataset['sentence'][i-1].upper())       # transcript to uppercase
+    for path in dataset['path']:                                            # for all files
+        if dataset['sentence'][i-1] != None:                                # only the non-empty transcript
+            sig, s = librosa.load(PATH + path, sr=16000, dtype='float32')   # read audio w/ 16k sr
+            if len(sig) > 1600:                                             # get rid of audio that's too short
+                my_dict["path"].append(path)                                # add path
+                my_dict["array"].append(sig)                                # add audio wave
+                my_dict["text"].append(dataset['sentence'][i-1].upper())    # transcript to uppercase
                 my_dict["dementia_labels"].append(ID2Label(path))
-        print(i, end="\r")                                                 # print progress
+        print(i, end="\r")                                                  # print progress
         i += 1
     print("There're ", len(my_dict["path"]), " non-empty files.")
 
     result_dataset = Dataset.from_dict(my_dict)
-    result_dataset.save_to_disk(stored)
+    result_dataset.save_to_disk(stored)                                     # save for later use
     
     return result_dataset
 
@@ -483,22 +484,22 @@ parser.add_argument('-num_off', '--NUM_OFF', type=int, default=None, help="num o
 parser.add_argument('-ap_rt', '--AP_RATIO', type=float, default=0, help="To toggle more or less for aggressive & passive masking")
 
 args = parser.parse_args()
-LAMBDA = args.LAMBDA
-STAGE = args.STAGE                # 1 for reverse for GRL model
-model_dir = args.model_path
-csv_name = args.csv_path
-model_type = args.model_type
-AD_loss = args.AD_loss
-TOGGLE_RATIO = args.TOGGLE_RATIO
-GS_TAU = args.GS_TAU
-if args.W_LOSS == None:
-    W_LOSS = [0.1, 0.9] # default weight for HC and AD
+LAMBDA = args.LAMBDA                    # lambda for GRL
+STAGE = args.STAGE                      # stage 1: train AD classifier; stage 2: train toggling network
+model_dir = args.model_path             # path to load the model
+csv_name = args.csv_path                # path to store the result
+model_type = args.model_type            # select different type of model (here only data2vec is ready to use)
+AD_loss = args.AD_loss                  # type of AD loss: cel, f1, recall, prec, (recall_ori, prec_ori)
+TOGGLE_RATIO = args.TOGGLE_RATIO        # for exp. to change toggle rate
+GS_TAU = args.GS_TAU                    # temperature for gumbel_softmax
+if args.W_LOSS == None:                 # weight for HC and AD
+    W_LOSS = [0.1, 0.9]                 # default weight for HC and AD
 else:
     W_LOSS = args.W_LOSS
 print("weight for loss: ", W_LOSS)
-EXP_TYPE = args.exp_type
-NUM_OFF = args.NUM_OFF
-AP_RATIO = args.AP_RATIO
+EXP_TYPE = args.exp_type                # type of exp. that "forces to toggle more or less": homogeneous masking(h), aggressive masking(a), and passive masking(p)
+NUM_OFF = args.NUM_OFF                  # num of groups to toggle off for homogeneous masking
+AP_RATIO = args.AP_RATIO                # ratio for aggressive & passive masking
 print("Current exp.: ", EXP_TYPE, " with ", NUM_OFF, "groups off.", " and AP_RATIO=", AP_RATIO)
 
 # threshold for maskes
@@ -960,16 +961,16 @@ class RecallLoss(nn.Module):
         input = input.to(torch.float)
         target = target.to(torch.int64)
 
-        N, C = input.size()[:2] # [batch_size, 2]
+        N, C = input.size()[:2]                                                         # [batch_size, 2]
         logpt = F.log_softmax(input, dim=1)
-        pt = logpt.exp() # pred_prob: [batch_size, 2]
+        pt = logpt.exp()                                                                # pred_prob: [batch_size, 2]
         #print("pt: ", pt)
 
         ## convert target (N, 1, *) into one hot vector (N, C, *)
-        target = target.view(N, 1, -1)  # (N, 1, *)
+        target = target.view(N, 1, -1)                                                  # (N, 1, *)
         last_size = target.size(-1)
-        target_onehot = torch.zeros((N, C, last_size)).type_as(pt) # (N, 1, *) ==> (N, C, *)
-        target_onehot.scatter_(1, target, 1) # (N, C, *)
+        target_onehot = torch.zeros((N, C, last_size)).type_as(pt)                      # (N, 1, *) ==> (N, C, *)
+        target_onehot.scatter_(1, target, 1)                                            # (N, C, *)
 
         true_positive = torch.sum(pt.view(N, C, last_size) * target_onehot, dim=2)      # (N, C): true label的預測"機率"
         total_target = torch.sum(target_onehot, dim=2)                                  # (N, C): true_prob
@@ -987,8 +988,8 @@ class RecallLoss(nn.Module):
             if self.weight.type() != input.type():
                 self.weight = self.weight.type_as(input)
             #print("weight: ", self.weight)
-            recall_ori = recall * self.weight * C            # (N, C): 1 - recall
-            precision_ori = precision * self.weight * C   # (N, C): 1 - prec
+            recall_ori = recall * self.weight * C                                       # (N, C): recall
+            precision_ori = precision * self.weight * C                                 # (N, C): prec
             f1 = f1 * self.weight * C                                                           # (N, C): f1
             recall = (torch.ones((N, C)).type_as(recall) - recall) * self.weight * C            # (N, C): 1 - recall
             precision = (torch.ones((N, C)).type_as(precision) - precision) * self.weight * C   # (N, C): 1 - prec
@@ -1010,31 +1011,33 @@ class RecallLoss(nn.Module):
             return recall_ori_loss
         elif AD_loss == "prec_ori":
             return precision_ori_loss
-
+# code for homogeneous masking
+# input: y0-y1 w/ size of batch_size, time_step, hidden_size
 def MaskOffNGroups(input, num_per_group, NUM_OFF):                  # force to turn off N groups
-    batch_size, time_step, hidden_size = input.size()               # input: y0-y1 w/ size of batch_size, time_step, hidden_size
+    batch_size, time_step, hidden_size = input.size()               # input: y0-y1 w/ size of [batch_size, time_step, hidden_size]
     #print(batch_size, time_step, hidden_size)
 
     batch_masks = torch.tensor([])                                  # masks of this batch
     for i in range(batch_size):                                     # for each sample
         time_step_masks = torch.tensor([])                          # masks of this sample
         for j in range(time_step):                                  # for each time-step
-            s = input[i, j, :]                                      # i-th sample in this batch, j-th score
+            s = input[i, j, :]                                      # i-th sample in this batch, j-th score in time series
             #print(s)
-            sorted_s = sorted(range(len(s)), key = lambda k : s[k]) # 由小到大的index，小的應該要關
-            mask = torch.ones(hidden_size)                          # force to turn on
+            sorted_s = sorted(range(len(s)), key = lambda k : s[k]) # value由小到大的index，小的應該要關
+            mask = torch.ones(hidden_size)                          # force to turn on all nodes
             mask[sorted_s[:int(NUM_OFF * num_per_group)]] = 0       # 由小排到大的前 NUM_OFF 組(每組有 num_per_group 個node)關掉
             mask = mask[None, :]                                    # add 1 dim to append
             #print(mask)
-            time_step_masks = torch.cat((time_step_masks, mask), 0)
+            time_step_masks = torch.cat((time_step_masks, mask), 0) # append
         # time_step_masks.size() = time_step, hidden_size
         #print("time_step_masks.size(): ", time_step_masks.size())
         time_step_masks = time_step_masks[None, :]                  # add 1 dim to append
-        batch_masks = torch.cat((batch_masks, time_step_masks), 0)
+        batch_masks = torch.cat((batch_masks, time_step_masks), 0)  # append
     #batch_masks.size() = batch_size, time_step, hidden_size
     #print("batch_masks.size(): ", batch_masks.size())
     return batch_masks
 
+# code for aggressive & passive masking
 # input: y0-y1 w/ size of batch_size, time_step, hidden_size
 # mask_ori: original mask formed by score passing Gumbel_softmax
 # ratio: how much more should be toggle on/off, 0-1
@@ -1050,18 +1053,18 @@ def AGG_PAS_masking(input, mask_ori, ratio, AGG):
   for i in range(batch_size):                                       # for each sample
     time_step_masks = torch.tensor([])                              # masks of this sample
     for j in range(time_step):                                      # for each time-step
-      s = input[i, j, :]                                            # i-th sample in this batch, j-th score
-      m = mask_ori[i, j, :]                                         # i-th sample in this batch, j-th mask
+      s = input[i, j, :]                                            # i-th sample in this batch, j-th score in time series
+      m = mask_ori[i, j, :]                                         # i-th sample in this batch, j-th mask in time series
       #print("mask_ori: ", m)
       if AGG:                                                       # aggressive masking
-        sorted_s = sorted(range(len(s)), key = lambda k : s[k])     # 由小到大的index，小的應該要關
+        sorted_s = sorted(range(len(s)), key = lambda k : s[k])     # value由小到大的index，小的應該要關
         # 原本關的關；原本開的 挑出其中一定比例(ratio)關掉、照排序去關
         mask = torch.ones(hidden_size)                              # 先都開
         if ratio == 1:                                              # 全關
           mask = torch.zeros(hidden_size)
         else:
           N = int(m.sum() * ratio)                                  # num of nodes forced to be closed
-          k = 0
+          k = 0                                                     # num of nodes that has been changed from "open" to "close"
           for idx in range(len(s)):                                 # go through all nodes
             # 由小到大的index，小的應該要關
             if m[sorted_s[idx]] == 0:                               # 原本關的
@@ -1073,7 +1076,7 @@ def AGG_PAS_masking(input, mask_ori, ratio, AGG):
       
       else:                                                         # passive masking
         sorted_s = sorted(range(len(s)), key = lambda k : s[k], reverse=True) 
-                                                                    # 由大到小的index，大的應該要開
+                                                                    # value由大到小的index，大的應該要開
         # 原本開的開，原本關的 挑出一定比例(ratio)開起來、按順序
         mask = torch.zeros(hidden_size)                             # 先都關
         if ratio == 1:                                              # 全開
@@ -1081,7 +1084,7 @@ def AGG_PAS_masking(input, mask_ori, ratio, AGG):
         else:
           N = int((hidden_size - m.sum()) * ratio)                  # num of nodes forced to be opened
           #print("N = ", N)
-          k = 0
+          k = 0                                                     # num of nodes that has been changed from "close" to "open"
           for idx in range(len(s)):                                 # go through all nodes
             # 由大到小的index，大的應該要開
             if m[sorted_s[idx]] == 1:                               # 原本開的
@@ -1092,11 +1095,11 @@ def AGG_PAS_masking(input, mask_ori, ratio, AGG):
                 k += 1                                              # 多開了一個
       mask = mask[None, :]                                          # add 1 dim to append
       #print(mask)
-      time_step_masks = torch.cat((time_step_masks, mask), 0)
+      time_step_masks = torch.cat((time_step_masks, mask), 0)       # append
     # time_step_masks.size() = time_step, hidden_size
     #print(time_step_masks.size())
     time_step_masks = time_step_masks[None, :]                      # add 1 dim to append
-    batch_masks = torch.cat((batch_masks, time_step_masks), 0)
+    batch_masks = torch.cat((batch_masks, time_step_masks), 0)      # append
     #batch_masks.size() = batch_size, time_step, hidden_size
   return batch_masks
 
@@ -1120,7 +1123,7 @@ class Data2VecAudioForCTC(Data2VecAudioPreTrainedModel):
         print("lambda = ", self.alpha)
         print("lm_thres = ", self.lm_thres)
 
-        # 加lm_model
+        # 加toggle network, lm_model
         #self.lm_fsm = nn.Linear(config.hidden_size, config.hidden_size)          # 找出對lm重要的feat
         self.arbitrator = nn.Linear(config.hidden_size, config.hidden_size*4)    # 2條保護AD資訊（one-hot後用其中一條），2條保護ASR資訊（one-hot後用其中一條）
         self.lm_head = nn.Linear(config.hidden_size, config.vocab_size)          # output字母的"機率"
@@ -1128,7 +1131,7 @@ class Data2VecAudioForCTC(Data2VecAudioPreTrainedModel):
         # 加dementia model
         self.dementia_head = nn.Linear(config.hidden_size, 2)                    # 辨識AD
         
-        # define similarity loss: AM-Softmax
+        # define similarity loss: AM-Softmax, aka div loss
         self.criterion_similar = AngularPenaltySMLoss(in_features=config.hidden_size, out_features=2, loss_type='cosface').to('cpu')
         
         # freeze feature_extractor    
@@ -1141,7 +1144,7 @@ class Data2VecAudioForCTC(Data2VecAudioPreTrainedModel):
             #self.freeze_lm_fsm()
             self.freeze_arbitrator()
             self.freeze_criterion_similar()
-        elif STAGE == 2:                                                # freeze all, train FSM alone
+        elif STAGE == 2:                                                # freeze all, train toggle network alone
             print("Current stage: 2")
             self.freeze_data2vec_audio()
             self.freeze_lm_head()
@@ -1275,7 +1278,7 @@ class Data2VecAudioForCTC(Data2VecAudioPreTrainedModel):
         #AD_mask = torch.nn.functional.gumbel_softmax(AD_score, hard=True, dim=-1)[:, :, :, 0] # back to [batch_size, time-step, hidden_state]
         AD_mask = gumbel_softmax(AD_score, tau=GS_TAU, hard=True, dim=-1)[:, :, :, 0]
         
-        if EXP_TYPE == 'h':                                                             #homogeneous masking
+        if EXP_TYPE == 'h':                                                             # homogeneous masking
             num_per_group = int(self.config.hidden_size / 16)                           # divided into 16 groups
             delta_y = lm_score[:, :, :, 0] - lm_score[:, :, :, 1]                       # y0-y1 for lm
             lm_mask = MaskOffNGroups(delta_y, num_per_group, NUM_OFF)
@@ -1349,7 +1352,7 @@ class Data2VecAudioForCTC(Data2VecAudioPreTrainedModel):
             # ctc_loss doesn't support fp16
             log_probs = nn.functional.log_softmax(logits, dim=-1, dtype=torch.float32).transpose(0, 1)
             log_probs_r = nn.functional.log_softmax(logits_r, dim=-1, dtype=torch.float32).transpose(0, 1) # logit轉prob
-            log_probs_r = ReverseLayerF.apply(log_probs_r, self.alpha) # GRL
+            log_probs_r = ReverseLayerF.apply(log_probs_r, self.alpha) # ASR-GRL
             
             with torch.backends.cudnn.flags(enabled=False):
                 loss = nn.functional.ctc_loss(
@@ -1372,7 +1375,7 @@ class Data2VecAudioForCTC(Data2VecAudioPreTrainedModel):
                     reduction=self.config.ctc_loss_reduction,
                     zero_infinity=self.config.ctc_zero_infinity,
                 )
-                # gradient reversal layers(GRL)
+                
                 if AD_loss == "cel":
                     print("loss: cel")
                     loss_fn = nn.CrossEntropyLoss()
@@ -1382,7 +1385,7 @@ class Data2VecAudioForCTC(Data2VecAudioPreTrainedModel):
                     dementia_loss_rev = loss_fn(dementia_output_mean_r, dementia_labels)                # reverse
                 elif AD_loss == "recall":                 
                     #print("loss: recall")
-                    loss_fn = RecallLoss(weight=W_LOSS)                                             # true label = 1 (AD) 的預測"機率"越大越好
+                    loss_fn = RecallLoss(weight=W_LOSS)                                                 # W_LOSS=[w_HC, w_AD]
                     #loss = criterion(y_predict, y_target)
                     # predict: [N, C, *]    ; target: [N, *]
                     dementia_loss = loss_fn(dementia_output_mean, dementia_labels, AD_loss)                      # AD classifier: [batch_size, 2], [batch_size,]
@@ -1395,7 +1398,7 @@ class Data2VecAudioForCTC(Data2VecAudioPreTrainedModel):
 
                 elif AD_loss == "prec":                 
                     #print("loss: precision")
-                    loss_fn = RecallLoss(weight=[0.1, 0.9])
+                    loss_fn = RecallLoss(weight=[0.1, 0.9])                                                      # emphasize on AD PAR
                     
                     dementia_loss = loss_fn(dementia_output_mean, dementia_labels, AD_loss)                      # AD classifier
                     dementia_loss_unmask = loss_fn(dementia_output_mean_unmask, dementia_labels, AD_loss)        # unmask
@@ -1422,7 +1425,7 @@ class Data2VecAudioForCTC(Data2VecAudioPreTrainedModel):
                     dementia_loss_unmask = loss_fn(dementia_output_mean_unmask, dementia_labels, AD_loss)        # unmask
                     dementia_loss_rev = loss_fn(dementia_output_mean_r, dementia_labels, AD_loss)                # reverse     
                 # att loss
-                Att_loss = FSMatt_loss(lm_mask, AD_mask)
+                Att_loss = FSMatt_loss(lm_mask, AD_mask)                                                        # not used in this version
                 # diversity loss: AM-Softmax
                 #scores = torch.cat((hidden_states * lm_mask, hidden_states * AD_mask), dim=0)
                 #am_labels = torch.cat((torch.zeros(len(hidden_states), dtype=torch.long), torch.ones(len(hidden_states), dtype=torch.long)), dim=0).to('cpu')
@@ -1449,7 +1452,7 @@ class Data2VecAudioForCTC(Data2VecAudioPreTrainedModel):
                 if STAGE == 1:                                                  # train AD classifier
                     #print("Current stage: 1")
                     final_loss = dementia_loss_unmask
-                elif STAGE == 2:                                                # train FSM
+                elif STAGE == 2:                                                # train toggle network
                     #print("Current stage: 2")
                     final_loss = loss + dementia_loss_rev + loss_r + dementia_loss + score_loss #+ Att_loss #+ score_loss
                     #print(loss, dementia_loss_rev, loss_r, dementia_loss, l2_lambda * l2_norm)
@@ -1461,6 +1464,7 @@ class Data2VecAudioForCTC(Data2VecAudioPreTrainedModel):
         if not return_dict:
             output = (logits,) + outputs[_HIDDEN_STATES_START_POSITION:]
 
+        # return info that we might need
         logits_all = {'ASR logits': logits, 'dementia logits': dementia_logits, 'hidden_states': hidden_states,
                     'lm_mask': lm_mask, "dementia_mask": AD_mask}
 
@@ -2379,30 +2383,29 @@ def map_to_result(batch, idx):
     
     pred_ad_tstep = torch.argmax(AD_lg, dim=-1)                                 # pred of each time-step
     pred_ad = pred_ad_tstep.sum() / pred_ad_tstep.size()[0]                     # average result
-    if pred_ad > 0.5:                                                           # over half of the time pred AD
-        batch["pred_AD"] = 1
+    if pred_ad > 0.5:                                                           # uf over half of the time pred AD
+        batch["pred_AD"] = 1                                                    # save final result as AD
     else:
         batch["pred_AD"] = 0
     
     pred_ids = torch.argmax(asr_lg, dim=-1)
-    batch["pred_str"] = processor.batch_decode(pred_ids)[0]
-    batch["text"] = processor.decode(batch["labels"], group_tokens=False)
+    batch["pred_str"] = processor.batch_decode(pred_ids)[0]                     # predicted transcript
+    batch["text"] = processor.decode(batch["labels"], group_tokens=False)       # ground truth transcript
     
     # for toggle
-    
-    df = pd.DataFrame({'path': batch["path"],                                    # to know which sample
+    df = pd.DataFrame({'path': batch["path"],                                   # to know which sample
                        'array': str(batch["array"]),
-                       'text': batch["text"],
+                       'text': batch["text"],                                   # ground truth transcript
                        'dementia_labels': batch["dementia_labels"],
-                       'input_values': str(batch["input_values"]),               # input of the model
+                       'input_values': str(batch["input_values"]),              # input of the model
                        'labels': str(batch["labels"]),
                        'ASR logits': str(logits["ASR logits"].tolist()),
                        'dementia logits': str(logits["dementia logits"].tolist()),
                        'hidden_states': str(logits["hidden_states"].tolist()),
                        'pred_AD': batch["pred_AD"],                             # AD prediction
-                       'pred_str': batch["pred_str"],
-                       'dementia_mask': str(logits["dementia_mask"].tolist()),
-                       'lm_mask': str(logits["lm_mask"].tolist())},
+                       'pred_str': batch["pred_str"],                           # predicted transcript
+                       'dementia_mask': str(logits["dementia_mask"].tolist()),  # ASR-free mask for AD classification
+                       'lm_mask': str(logits["lm_mask"].tolist())},             # AD-free mask for ASR task
                       index=[idx])
     
     """
@@ -2422,47 +2425,10 @@ def map_to_result(batch, idx):
     """
     return df
 
-def ID2MMSE(ID,
-            id2mmse = np.load("/mnt/Internal/FedASR/weitung/HuggingFace/Pretrain/dataset/ID2MMSE.npy", allow_pickle=True).tolist()):
-
-    name = ID.split("_")                                  # from file name to spkID
-    if (name[1] == 'INV'):                                # shouldn't have INV
-        MMSE = None
-    else:                                                 # for participant
-        MMSE = id2mmse[name[0]]                           # label according to look-up table
-    return MMSE                                           # return MMSE for this file
-
-def ADprediction(result): # given the above result, return ground true label w/ pred label
-    sorted_dict = {}
-    #i = 0
-    for item in result:
-        id_part = item['path'].split('_')
-        if id_part[1] == 'PAR':                            # predict only on participant
-            if id_part[0] not in sorted_dict.keys():
-                sorted_dict[id_part[0]] = [item['pred_AD']]     # add values to this spk
-                #print(item['path'])
-                #print(item['text'], " || vs || ", item['pred_str'])
-                #print(item['dementia_labels'], " || vs || ", item['pred_AD'])
-                #i = i + 1
-            else:
-                sorted_dict[id_part[0]].append(item['pred_AD']) 
-                
-    true = []
-    pred = []
-    for spkid in sorted_dict.keys():
-        true_label = ID2Label(spkid + '_PAR')
-        true.append(true_label)
-
-        vote = sum(sorted_dict[spkid]) / len(sorted_dict[spkid])
-        if vote > 0.5:                                               # over half of the pred is AD
-            pred.append(1)
-        else:
-            pred.append(0)
-            
-    return true, pred
-
 from transformers import Data2VecAudioConfig, HubertConfig, SEWDConfig, UniSpeechSatConfig
 
+# load according to model type
+# note that only data2vec is done for this version
 if model_type == "wav2vec":
     model = Wav2Vec2ForCTC.from_pretrained(model_dir)
     name = "facebook/wav2vec2-base-960h" # + model_dir.split("/")[-3]
@@ -2471,7 +2437,7 @@ if model_type == "wav2vec":
 elif model_type == "data2vec":
     name = "facebook/data2vec-audio-large-960h" # + model_in_dir.split("/")[-3]
     print("Current model: ", name)
-    mask_time_prob = 0                                                                     # change config
+    mask_time_prob = 0                                                                     # change config to avoid code from stopping
     config = Data2VecAudioConfig.from_pretrained(name, mask_time_prob=mask_time_prob)
     model = Data2VecAudioForCTC.from_pretrained(model_dir, config=config)
     processor = Wav2Vec2Processor.from_pretrained(name)
@@ -2504,6 +2470,7 @@ data_collator = DataCollatorCTCWithPadding(processor=processor, padding=True)
 test_data = csv2dataset(path = "/mnt/Internal/FedASR/Data/ADReSS-IS2020-data/mid_csv/test.csv")
 test_data = test_data.map(prepare_dataset, num_proc=10)
 
+# get emb.s, masks... 1 sample by 1 sample
 df = map_to_result(test_data[0], 0)
 for i in range(len(test_data) - 1):
     df2 = map_to_result(test_data[i+1], i+1)
@@ -2519,6 +2486,7 @@ print("Testing data Done")
 train_data = csv2dataset(path = "/mnt/Internal/FedASR/Data/ADReSS-IS2020-data/mid_csv/train.csv")
 train_data = train_data.map(prepare_dataset, num_proc=10)
 
+# get emb.s, masks... 1 sample by 1 sample
 df = map_to_result(train_data[0], 0)
 for i in range(len(train_data) - 1):
     df2 = map_to_result(train_data[i+1], i+1)
@@ -2529,7 +2497,7 @@ csv_path = "./saves/results/" + csv_name + "_train.csv"
 df.to_csv(csv_path)
 print("Training data Done")
 
-# store result of test data
+# store result of dev data
 """
 dev_data = csv2dataset(path = "/mnt/Internal/FedASR/Data/ADReSS-IS2020-data/mid_csv/dev.csv")
 dev_data = dev_data.map(prepare_dataset, num_proc=10)
