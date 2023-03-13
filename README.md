@@ -1,36 +1,43 @@
 # DACS
 
 # Training
-**Single Toggline, FSM, and DACS share the same "stage 1" where the AD classifier was trained using the ASR encoder obtained from "fine-tune"**
 1. Baselines
-    - Fine-tune: `finetune_ASRs.py`
+    - Fine-tune: use `finetune_ASRs.py` to train
         <details><summary>Show important arguments</summary>
 
         - `--model_type`: choose from wav2vec, data2vec, hubert, sewd, and unispeech
 
         </details>
-    - GRL: `trainer_data2vec.py`
+
+        - The resulted model is then used for models **except GRL**
+    - GRL: use `trainer_data2vec.py` to train
         <details><summary>Show important arguments</summary>
 
         - `--LAMBDA`: config for GRL, 0.5 as default
-        - `--GRL`: once given in the command, the model will perform GRL training. o.w. multi-task will be performed
+        - `--GRL`: once given in the command, the code will perform GRL training, o.w. multi-task will be performed
+        - `--model_in_path`: path for the starting model, pre-trained model is used here
+        - `--model_out_path`: path to save the resulted model
+        - `--log_path`: path to save log file
 
         </details>
-    - Single Toggling: `trainer_data2vec_toggle.py`
 
-        ![images](https://biicgitlab.ee.nthu.edu.tw/weitung.hsu/dacs/-/blob/main/imgs/single_toggling.png)
-        - Only 1 branch (toggle network only generates vector with dim=2*D, where D is the dim. for ASR embedding), only AD-free ASR score and is turned into mask by passing gumbel_softmax. Trained with L_ctc and reversed CE loss of AD classifier
-    - FSM: `trainer_data2vec_5st.py`
+        - ASR decoder and AD classifier are added after the ASR encoder. GRL is added on the AD classifier.
+    - Single Toggling: use `trainer_data2vec_toggle.py` to train
         <details><summary>Show important arguments</summary>
 
-        - `--STAGE`: current training stage
-        - `--threshold`: threshold to generate mask
-        
+        - `--STAGE`: number of stage for training
+
         </details>
 
-        - Stage 2 (6 in the code): train 2 FSM at the same time from model w/ trained AD classifier & ASR encoder
+        ![images](https://biicgitlab.ee.nthu.edu.tw/weitung.hsu/dacs/-/blob/main/imgs/single_toggling.png)
+        - Stage 1: freeze fine-tuned ASR encoder and train AD classifier
+        - Stage 2: train toggling network with only **1 branch**(toggling network only generates vector with dim=2*D, where D is the dim. for ASR embedding. Only AD-free ASR score exists and is turned into mask by passing gumbel_softmax. Trained with L_ctc and reversed CE loss of AD classifier
+    - FSM: use `trainer_data2vec_5st.py` to train
+        - Stage 1: freeze fine-tuned ASR encoder and train AD classifier (use other code like `trainer_data2vec_toggle.py` to obtain)
+        - Stage 2 (6 in the code): train 2 FSM at the same time
+            - threshold is set to 0.5 to generate mask
 2. Proposed
-    - DACS: `trainer_data2vec_2st.py`
+    - DACS: use `trainer_data2vec_2st.py` to train
         <details><summary>Show important arguments</summary>
 
         - `--AD_loss`: type of loss for AD classifier, can be chosen from the following types: cel, f1, recall, prec, (recall_ori, prec_ori)
@@ -38,29 +45,30 @@
         - `--TOGGLE_RATIO`: for exp. to change toggle rate, y0' = (y1-y0)*TOGGLE_RATIO + y0
         - `--GS_TAU`: temperature for gumbel_softmax
         - `--W_LOSS`: weight for HC and AD
+
         </details>
 
-        - Stage 1: train AD classifier from fine-tune model, e.g.`python trainer_data2vec_2st.py -lam 0.5 -st 1 --AD_loss "recall" --W_LOSS 0.8 0.2 -model_in "./saves/data2vec-audio-large-960h_finetuned/final/" -model_out "./saves/data2vec-audio-large-960h_new1_recall_82" -log "data2vec-audio-large-960h_new1_recall_82.txt"`
+        - Stage 1: freeze fine-tuned ASR encoder and train AD classifier, e.g.`python trainer_data2vec_2st.py -lam 0.5 -st 1 --AD_loss "recall" --W_LOSS 0.8 0.2 -model_in "./saves/data2vec-audio-large-960h_finetuned/final/" -model_out "./saves/data2vec-audio-large-960h_new1_recall_82" -log "data2vec-audio-large-960h_new1_recall_82.txt"`
         - Stage 2: train toggling network from stage 1 model, e.g. `python trainer_data2vec_2st.py -lam 0.5 -st 2 --AD_loss "recall" --W_LOSS 0.8 0.2 -model_in "./saves/data2vec-audio-large-960h_new1_recall_82/final/" -model_out "./saves/data2vec-audio-large-960h_new2_recall_82" -log "data2vec-audio-large-960h_new2_recall_82.txt"`
 
 
 # Extracting Feat.
 1. Baselines
-    - Fine-tune: `eval_finetune.py`
-    - GRL:`eval.py`
+    - Fine-tune: use `eval_finetune.py` to extract embeddings
         <details><summary>Show important arguments</summary>
 
-        - `--LAMBDA`: 
-        - `--STAGE`: 1 for GRL, else multi-task
-        - `--model_path`:
-        - `--csv_path`:  
-        - `--model_type`: 
+        - `--model_path`: path to the model you want to extract
+        - `--csv_path`: name for the csv file
+
         </details>
-    - Single Toggling: `eval_SingleToggle.py`(paired with `trainer_data2vec_toggle.py` with similar arguments)
-    - FSM: `eval_FSM.py`(paired with `trainer_data2vec_5st.py` with similar arguments)
+    - GRL: use `eval.py` to extract embeddings
+        - Here we use stage=1 to represent GRL
+    - Single Toggling: use `eval_SingleToggle.py` to extract embeddings (paired with `trainer_data2vec_toggle.py` with similar arguments)
+    - FSM: use `eval_FSM.py`  to extract embeddings (paired with `trainer_data2vec_5st.py` with similar arguments)
 
 2. Proposed
-    - DACS: `eval_toggle_GS.py` (paired with `trainer_data2vec_2st.py` with similar arguments)
+    - DACS: use `eval_toggle_GS.py`  to extract embeddings (paired with `trainer_data2vec_2st.py` with similar arguments)
+
 3. Exp.
     - `eval_toggle_more.py` is used for all 3 exp. that force to toggle on more or less.
 
