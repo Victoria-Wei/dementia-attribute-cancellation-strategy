@@ -2383,7 +2383,7 @@ def map_to_result(batch, idx):
     
     pred_ad_tstep = torch.argmax(AD_lg, dim=-1)                                 # pred of each time-step
     pred_ad = pred_ad_tstep.sum() / pred_ad_tstep.size()[0]                     # average result
-    if pred_ad > 0.5:                                                           # uf over half of the time pred AD
+    if pred_ad > 0.5:                                                           # if over half of the time pred AD
         batch["pred_AD"] = 1                                                    # save final result as AD
     else:
         batch["pred_AD"] = 0
