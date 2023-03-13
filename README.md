@@ -4,7 +4,10 @@
 1. Baselines
     - Fine-tune
     - GRL
-    - Single Toggling
+    - Single Toggling: `trainer_data2vec_toggle.py`
+
+        ![images](https://biicgitlab.ee.nthu.edu.tw/weitung.hsu/dacs/-/blob/main/imgs/single_toggling.png)
+        - Only 1 branch (toggle network only generates vector with dim=2*D, where D is the dim. for ASR embedding), only AD-free ASR score and is turned into mask by passing gumbel_softmax. Trained with L_ctc and reversed CE loss of AD classifier
     - FSM
 2. Proposed
     - DACS: `trainer_data2vec_2st.py`
@@ -25,7 +28,7 @@
 1. Baselines
     - Fine-tune
     - GRL
-    - Single Toggling
+    - Single Toggling: `eval_SingleToggle.py`(paired with `trainer_data2vec_toggle.py` with similar arguments)
     - FSM
 2. Proposed
     - DACS: `eval_toggle_GS.py` (paired with `trainer_data2vec_2st.py` with similar arguments)
