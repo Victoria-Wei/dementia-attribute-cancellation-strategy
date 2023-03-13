@@ -3,7 +3,12 @@
 # Training
 **Single Toggline, FSM, and DACS share the same "stage 1" where the AD classifier was trained using the ASR encoder obtained from "fine-tune"**
 1. Baselines
-    - Fine-tune
+    - Fine-tune: `finetune_ASRs.py`
+        <details><summary>Show important arguments</summary>
+
+        - `--model_type`: choose from wav2vec, data2vec, hubert, sewd, and unispeech
+
+        </details>
     - GRL
         <details><summary>Show important arguments</summary>
 
@@ -40,8 +45,8 @@
 
 # Extracting Feat.
 1. Baselines
-    - Fine-tune
-    - GRL
+    - Fine-tune: `eval_finetune.py`
+    - GRL:`eval.py?`
         <details><summary>Show important arguments</summary>
 
         - `--LAMBDA`: 
