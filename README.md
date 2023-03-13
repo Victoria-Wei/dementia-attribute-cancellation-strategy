@@ -18,8 +18,9 @@
 
         - `--STAGE`: current training stage
         - `--threshold`: threshold to generate mask
-
+        
         </details>
+
         - Stage 2 (6 in the code): train 2 FSM at the same time from model w/ trained AD classifier & ASR encoder
 2. Proposed
     - DACS: `trainer_data2vec_2st.py`
