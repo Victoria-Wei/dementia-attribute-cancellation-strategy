@@ -1,6 +1,7 @@
 # DACS
 
 # Training
+**Single Toggline, FSM, and DACS share the same "stage 1" where the AD classifier was trained using the ASR encoder obtained from "fine-tune"**
 1. Baselines
     - Fine-tune
     - GRL
