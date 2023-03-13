@@ -4,11 +4,23 @@
 1. Baselines
     - Fine-tune
     - GRL
+        <details><summary>Show important arguments</summary>
+
+        - `--LAMBDA`: 
+
+        </details>
     - Single Toggling: `trainer_data2vec_toggle.py`
 
         ![images](https://biicgitlab.ee.nthu.edu.tw/weitung.hsu/dacs/-/blob/main/imgs/single_toggling.png)
         - Only 1 branch (toggle network only generates vector with dim=2*D, where D is the dim. for ASR embedding), only AD-free ASR score and is turned into mask by passing gumbel_softmax. Trained with L_ctc and reversed CE loss of AD classifier
-    - FSM
+    - FSM: `trainer_data2vec_5st.py`
+        <details><summary>Show important arguments</summary>
+
+        - `--STAGE`: current training stage
+        - `--threshold`: threshold to generate mask
+
+        </details>
+        - Stage 2 (6 in the code): train 2 FSM at the same time from model w/ trained AD classifier & ASR encoder
 2. Proposed
     - DACS: `trainer_data2vec_2st.py`
         <details><summary>Show important arguments</summary>
@@ -28,8 +40,17 @@
 1. Baselines
     - Fine-tune
     - GRL
+        <details><summary>Show important arguments</summary>
+
+        - `--LAMBDA`: 
+        - `--STAGE`: 
+        - `--model_path`:
+        - `--csv_path`:  
+        - `--model_type`: 
+        </details>
     - Single Toggling: `eval_SingleToggle.py`(paired with `trainer_data2vec_toggle.py` with similar arguments)
-    - FSM
+    - FSM: `eval_FSM.py`(paired with `trainer_data2vec_5st.py` with similar arguments)
+
 2. Proposed
     - DACS: `eval_toggle_GS.py` (paired with `trainer_data2vec_2st.py` with similar arguments)
 3. Exp.
