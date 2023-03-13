@@ -9,10 +9,11 @@
         - `--model_type`: choose from wav2vec, data2vec, hubert, sewd, and unispeech
 
         </details>
-    - GRL
+    - GRL: `trainer_data2vec.py`
         <details><summary>Show important arguments</summary>
 
-        - `--LAMBDA`: 
+        - `--LAMBDA`: config for GRL, 0.5 as default
+        - `--GRL`: once given in the command, the model will perform GRL training. o.w. multi-task will be performed
 
         </details>
     - Single Toggling: `trainer_data2vec_toggle.py`
@@ -46,11 +47,11 @@
 # Extracting Feat.
 1. Baselines
     - Fine-tune: `eval_finetune.py`
-    - GRL:`eval.py?`
+    - GRL:`eval.py`
         <details><summary>Show important arguments</summary>
 
         - `--LAMBDA`: 
-        - `--STAGE`: 
+        - `--STAGE`: 1 for GRL, else multi-task
         - `--model_path`:
         - `--csv_path`:  
         - `--model_type`: 
