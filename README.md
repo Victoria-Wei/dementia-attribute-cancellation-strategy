@@ -7,7 +7,7 @@
     - Single Toggling
     - FSM
 2. Proposed
-    - DACS: train for 2 stage. 
+    - DACS: `trainer_data2vec_2st.py`
         <details><summary>Show important arguments</summary>
 
         - `--AD_loss`: type of loss for AD classifier, can be chosen from the following types: cel, f1, recall, prec, (recall_ori, prec_ori)
@@ -28,7 +28,7 @@
     - Single Toggling
     - FSM
 2. Proposed
-    - DACS
+    - DACS: `eval_toggle_GS.py` (paired with `trainer_data2vec_2st.py` with similar arguments)
 3. Exp.
     - `eval_toggle_more.py` is used for all 3 exp. that force to toggle on more or less.
 
