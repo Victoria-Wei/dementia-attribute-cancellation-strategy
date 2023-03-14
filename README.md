@@ -1,5 +1,7 @@
 # DACS
 
+# Environment
+    - transformers == 4.17.0
 # Training
 1. Baselines
     - Fine-tune: use `finetune_ASRs.py` to train
