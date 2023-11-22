@@ -6,9 +6,6 @@
     - jiwer
     - Levenshtein==0.21.0
 
-    - numpy==1.22.2
-    - pytorch==1.12.0 torchvision==0.13.0 torchaudio==0.12.0
-
 # Training
 1. Baselines
     - Fine-tune: use `finetune_ASRs.py` to train
